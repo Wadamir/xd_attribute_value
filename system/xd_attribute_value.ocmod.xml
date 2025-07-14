@@ -1,0 +1,646 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<modification>
+	<name>XD Attribute Value for ocStore 3.x</name>
+	<code>xdattributevalue10</code>
+	<version>1.0</version>
+    <author><![CDATA[<span style="color:#0066cc"><b>XDomus.ru</b></span>]]></author>
+    <link>//xdomus.ru/opencart/modul-stikery-dlya-opencart-besplatno/</link>
+    <file path="admin/controller/catalog/attribute.php">
+        <operation>
+            <search><![CDATA[
+                $this->response->setOutput($this->load->view('catalog/attribute_form', $data));
+            ]]></search>
+            <add position="before"><![CDATA[
+                if (isset($this->request->post['type'])) {
+                    $data['type'] = $this->request->post['type'];
+                } elseif (!empty($attribute_info)) {
+                    $data['type'] = $attribute_info['type'];
+                } else {
+                    $data['type'] = '';
+                }
+
+                if (isset($this->request->post['attribute_value'])) {
+                    $attribute_values = $this->request->post['attribute_value'];
+                } elseif (isset($this->request->get['attribute_id'])) {
+                    $attribute_values = $this->model_catalog_attribute->getAttributeValueDescriptions($this->request->get['attribute_id']);
+                } else {
+                    $attribute_values = array();
+                }
+
+                $this->load->model('tool/image');
+
+                $data['attribute_values'] = array();
+
+                foreach ($attribute_values as $attribute_value) {
+                    if (is_file(DIR_IMAGE . $attribute_value['image'])) {
+                        $image = $attribute_value['image'];
+                        $thumb = $attribute_value['image'];
+                    } else {
+                        $image = '';
+                        $thumb = 'no_image.png';
+                    }
+
+                    $data['attribute_values'][] = array(
+                        'attribute_value_id'            => $attribute_value['attribute_value_id'],
+                        'attribute_value_description'   => $attribute_value['attribute_value_description'],
+                        'image'                         => $image,
+                        'thumb'                         => $this->model_tool_image->resize($thumb, 100, 100),
+                        'sort_order'                    => $attribute_value['sort_order']
+                    );
+                }            
+                $data['placeholder'] = $this->model_tool_image->resize('no_image.png', 100, 100);
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                public function autocomplete() {
+            ]]></search>
+            <add position="before"><![CDATA[
+                public function getAttributeValues() {
+                    if (!isset($this->request->get['attribute_id'])) {
+                        return;
+                    }
+
+                    $attribute_id = (int)$this->request->get['attribute_id'];
+
+                    $this->load->model('catalog/attribute');
+
+                    $results = $this->model_catalog_attribute->getAttributeValueDescriptions($attribute_id);
+
+                    $this->response->addHeader('Content-Type: application/json');
+                    $this->response->setOutput(json_encode($results));
+                }
+            ]]></add>        
+        </operation>
+    </file>
+    <file path="admin/language/en-gb/catalog/attribute.php">
+        <operation>
+            <search><![CDATA[
+                $_['entry_name']
+            ]]></search>
+            <add position="before"><![CDATA[
+                $_['entry_type']                = 'Type';
+                $_['text_text']                 = 'Text';
+                $_['text_select']               = 'Select';
+                $_['entry_attribute_value']     = 'Attribute Value';
+                $_['entry_image']               = 'Image';
+            ]]></add>
+        </operation>
+    </file>
+    <file path="admin/language/ru-ru/catalog/attribute.php">
+        <operation>
+            <search><![CDATA[
+                $_['entry_name']
+            ]]></search>
+            <add position="before"><![CDATA[
+                $_['entry_type']                = 'Тип';
+                $_['text_text']                 = 'Текст';
+                $_['text_select']               = 'Список';
+                $_['entry_attribute_value']     = 'Значение атрибута';
+                $_['entry_image']               = 'Изображение';
+            ]]></add>
+        </operation>
+    </file>
+    <file path="admin/model/catalog/attribute.php">
+        <operation>
+            <search><![CDATA[
+                return $attribute_id;
+            ]]></search>
+            <add position="before"><![CDATA[
+                if (isset($data['type'])) {
+                    $this->db->query("UPDATE " . DB_PREFIX . "attribute SET type = '" . $this->db->escape($data['type']) . "' WHERE attribute_id = '" . (int)$attribute_id . "'");
+                }
+                if (isset($data['attribute_value'])) {
+                    foreach ($data['attribute_value'] as $attribute_value) {
+
+                        $this->db->query("INSERT INTO " . DB_PREFIX . "attribute_value SET attribute_id = '" . (int)$attribute_id . "', image = '" . $this->db->escape($attribute_value['image']) . "', sort_order = '" . (int)$attribute_value['sort_order'] . "'");
+
+                        $attribute_value_id = $this->db->getLastId();
+
+                        foreach ($attribute_value['attribute_value_description'] as $language_id => $attribute_value_description) {
+                            $this->db->query("INSERT INTO " . DB_PREFIX . "attribute_value_description SET attribute_value_id = '" . (int)$attribute_value_id . "', language_id = '" . (int)$language_id . "', attribute_id = '" . (int)$attribute_id . "', name = '" . $this->db->escape($attribute_value_description['name']) . "'");
+                            
+                        }
+                    }
+                }
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                $this->db->query("UPDATE " . DB_PREFIX . "attribute SET attribute_group_id = '" . (int)$data['attribute_group_id'] . "', sort_order = '" . (int)$data['sort_order'] . "' WHERE attribute_id = '" . (int)$attribute_id . "'");
+            ]]></search>
+            <add position="after"><![CDATA[
+                if (isset($data['type'])) {
+                    $this->db->query("UPDATE " . DB_PREFIX . "attribute SET type = '" . $this->db->escape($data['type']) . "' WHERE attribute_id = '" . (int)$attribute_id . "'");
+                }
+
+                $this->db->query("DELETE FROM " . DB_PREFIX . "attribute_value WHERE attribute_id = '" . (int)$attribute_id . "'");
+                $this->db->query("DELETE FROM " . DB_PREFIX . "attribute_value_description WHERE attribute_id = '" . (int)$attribute_id . "'");
+
+                if (isset($data['attribute_value'])) {
+                    foreach ($data['attribute_value'] as $attribute_value) {
+                        if ($attribute_value['attribute_value_id']) {
+                            $this->db->query("INSERT INTO " . DB_PREFIX . "attribute_value SET attribute_value_id = '" . (int)$attribute_value['attribute_value_id'] . "', attribute_id = '" . (int)$attribute_id . "', image = '" . $this->db->escape(html_entity_decode($attribute_value['image'], ENT_QUOTES, 'UTF-8')) . "', sort_order = '" . (int)$attribute_value['sort_order'] . "'");
+                        } else {
+                            $this->db->query("INSERT INTO " . DB_PREFIX . "attribute_value SET attribute_id = '" . (int)$attribute_id . "', image = '" . $this->db->escape(html_entity_decode($attribute_value['image'], ENT_QUOTES, 'UTF-8')) . "', sort_order = '" . (int)$attribute_value['sort_order'] . "'");
+                        }
+
+                        $attribute_value_id = $this->db->getLastId();
+
+                        foreach ($attribute_value['attribute_value_description'] as $language_id => $attribute_value_description) {
+                            $this->db->query("INSERT INTO " . DB_PREFIX . "attribute_value_description SET attribute_value_id = '" . (int)$attribute_value_id . "', language_id = '" . (int)$language_id . "', attribute_id = '" . (int)$attribute_id . "', name = '" . $this->db->escape($attribute_value_description['name']) . "'");
+                        }
+                    }
+                }             
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                public function deleteAttribute($attribute_id) {
+            ]]></search>
+            <add position="after"><![CDATA[
+                $this->db->query("DELETE FROM " . DB_PREFIX . "attribute_value WHERE attribute_id = '" . (int)$attribute_id . "'");
+                $this->db->query("DELETE FROM " . DB_PREFIX . "attribute_value_description WHERE attribute_id = '" . (int)$attribute_id . "'");
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                public function getTotalAttributes()
+            ]]></search>
+            <add position="before"><![CDATA[
+                /*
+                public function getAttributeValue($attribute_value_id) {
+                    $query = $this->db->query("SELECT * FROM " . DB_PREFIX . "attribute_value av LEFT JOIN " . DB_PREFIX . "attribute_value_description avd ON (av.attribute_value_id = avd.attribute_value_id) WHERE av.attribute_value_id = '" . (int)$attribute_value_id . "' AND avd.language_id = '" . (int)$this->config->get('config_language_id') . "'");
+
+                    return $query->row;
+                }
+                public function getAttributeValues($attribute_id) {
+                    $attribute_value_data = array();
+
+                    $attribute_value_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "attribute_value av LEFT JOIN " . DB_PREFIX . "attribute_value_description avd ON (av.attribute_value_id = avd.attribute_value_id) WHERE av.attribute_id = '" . (int)$attribute_id . "' AND avd.language_id = '" . (int)$this->config->get('config_language_id') . "' ORDER BY av.sort_order, avd.name");
+
+                    foreach ($attribute_value_query->rows as $attribute_value) {
+                        $attribute_value_data[] = array(
+                            'attribute_value_id' => $attribute_value['attribute_value_id'],
+                            'name'            => $attribute_value['name'],
+                            'image'           => $attribute_value['image'],
+                            'sort_order'      => $attribute_value['sort_order']
+                        );
+                    }
+
+                    return $attribute_value_data;
+                }
+                */
+                public function getAttributeValueDescriptions($attribute_id) {
+                    $attribute_value_data = array();
+
+                    $attribute_value_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "attribute_value WHERE attribute_id = '" . (int)$attribute_id . "' ORDER BY sort_order");
+
+                    foreach ($attribute_value_query->rows as $attribute_value) {
+                        $attribute_value_description_data = array();
+
+                        $attribute_value_description_query = $this->db->query("SELECT * FROM " . DB_PREFIX . "attribute_value_description WHERE attribute_value_id = '" . (int)$attribute_value['attribute_value_id'] . "'");
+
+                        foreach ($attribute_value_description_query->rows as $attribute_value_description) {
+                            $attribute_value_description_data[$attribute_value_description['language_id']] = array('name' => $attribute_value_description['name']);
+                        }
+
+                        $attribute_value_data[] = array(
+                            'attribute_value_id'          => $attribute_value['attribute_value_id'],
+                            'attribute_value_description' => $attribute_value_description_data,
+                            'image'                    => $attribute_value['image'],
+                            'sort_order'               => $attribute_value['sort_order']
+                        );
+                    }
+
+                    return $attribute_value_data;
+                }
+            ]]></add>
+        </operation>
+    </file>
+    <file path="admin/view/template/catalog/attribute_form.twig">
+        <operation>
+            <search><![CDATA[
+                </form>
+            ]]></search>
+            <add position="before"><![CDATA[
+                <div class="form-group">
+                    <label class="col-sm-2 control-label" for="input-type">{{ entry_type }}</label>
+                    <div class="col-sm-10">
+                        <select name="type" id="input-type" class="form-control">
+                            <option value="text" {% if type == 'text' %}selected{% endif %}>{{ text_text }}</option>
+                            <option value="select" {% if type == 'select' %}selected{% endif %}>{{ text_select }}</option>
+                        </select>
+                    </div>
+                </div>
+                <fieldset>
+                    <legend>{{ text_value }}</legend>
+                    <table id="attribute-value" class="table table-striped table-bordered table-hover">
+                        <thead>
+                            <tr>
+                                <td class="text-left required">{{ entry_attribute_value }}</td>
+                                <td class="text-center">{{ entry_image }}</td>
+                                <td class="text-right">{{ entry_sort_order }}</td>
+                                <td></td>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% set attribute_value_row = 0 %}
+                            {% for attribute_value in attribute_values %}
+                                <tr id="attribute-value-row{{ attribute_value_row }}">
+                                    <td class="text-left">
+                                        <input type="hidden" name="attribute_value[{{ attribute_value_row }}][attribute_value_id]" value="{{ attribute_value.attribute_value_id }}" />
+                                        {% for language in languages %}
+                                            <div class="input-group">
+                                                <span class="input-group-addon">
+                                                    <img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" />
+                                                </span>
+                                                <input type="text" name="attribute_value[{{ attribute_value_row }}][attribute_value_description][{{ language.language_id }}][name]" value="{{ attribute_value.attribute_value_description[language.language_id] ? attribute_value.attribute_value_description[language.language_id].name }}" placeholder="{{ entry_attribute_value }}" class="form-control" />
+                                            </div>
+                                            {% if error_attribute_value[attribute_value_row][language.language_id] %}
+                                                <div class="text-danger">{{ error_attribute_value[attribute_value_row][language.language_id] }}</div>
+                                            {% endif %}
+                                        {% endfor %}
+                                    </td>
+                                    <td class="text-center">
+                                        <a href="" id="thumb-image{{ attribute_value_row }}" data-toggle="image" class="img-thumbnail">
+                                            <img src="{{ attribute_value.thumb }}" alt="" title="" data-placeholder="{{ placeholder }}" />
+                                        </a>
+                                        <input type="hidden" name="attribute_value[{{ attribute_value_row }}][image]" value="{{ attribute_value.image }}" id="input-image{{ attribute_value_row }}" />
+                                    </td>
+                                    <td class="text-right">
+                                        <input type="text" name="attribute_value[{{ attribute_value_row }}][sort_order]" value="{{ attribute_value.sort_order }}" class="form-control" />
+                                    </td>
+                                    <td class="text-right">
+                                        <button type="button" onclick="$('#attribute-value-row{{ attribute_value_row }}').remove();" data-toggle="tooltip" title="{{ button_remove }}" class="btn btn-danger">
+                                            <i class="fa fa-minus-circle"></i>
+                                        </button>
+                                    </td>
+                                </tr>
+                                {% set attribute_value_row = attribute_value_row + 1 %}
+                            {% endfor %}
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <td colspan="3"></td>
+                                <td class="text-right">
+                                    <button type="button" onclick="addAttributeValue();" data-toggle="tooltip" title="{{ button_attribute_value_add }}" class="btn btn-primary">
+                                        <i class="fa fa-plus-circle"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </fieldset>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                {{ footer }}
+            ]]></search>
+            <add position="before"><![CDATA[
+                <script>
+                    // Toggle visibility of attribute values block depending on selected type
+                    $('select[name="type"]').on('change', function () {
+                        if (this.value === 'select' || this.value === 'radio' || this.value === 'checkbox' || this.value === 'image') {
+                            $('#attribute-value').parent().show();
+                        } else {
+                            $('#attribute-value').parent().hide();
+                        }
+                    });
+
+                    $('select[name="type"]').trigger('change');
+
+                    let attribute_value_row = {{ attribute_value_row }};
+
+                    function addAttributeValue() {
+                        let html = '';
+                        html += '<tr id="attribute-value-row' + attribute_value_row + '">';
+                        html += '  <td class="text-left">';
+                        html += '    <input type="hidden" name="attribute_value[' + attribute_value_row + '][attribute_value_id]" value="" />';
+                        {% for language in languages %}
+                        html += '    <div class="input-group">';
+                        html += '      <span class="input-group-addon">';
+                        html += '        <img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" />';
+                        html += '      </span>';
+                        html += '      <input type="text" name="attribute_value[' + attribute_value_row + '][attribute_value_description][{{ language.language_id }}][name]" value="" placeholder="{{ entry_attribute_value }}" class="form-control" />';
+                        html += '    </div>';
+                        {% endfor %}
+                        html += '  </td>';
+                        html += '  <td class="text-center">';
+                        html += '    <a href="" id="thumb-image' + attribute_value_row + '" data-toggle="image" class="img-thumbnail">';
+                        html += '      <img src="{{ placeholder }}" alt="" title="" data-placeholder="{{ placeholder }}" />';
+                        html += '    </a>';
+                        html += '    <input type="hidden" name="attribute_value[' + attribute_value_row + '][image]" value="" id="input-image' + attribute_value_row + '" />';
+                        html += '  </td>';
+                        html += '  <td class="text-right">';
+                        html += '    <input type="text" name="attribute_value[' + attribute_value_row + '][sort_order]" value="" placeholder="{{ entry_sort_order }}" class="form-control" />';
+                        html += '  </td>';
+                        html += '  <td class="text-right">';
+                        html += '    <button type="button" onclick="$(\'#attribute-value-row' + attribute_value_row + '\').remove();" data-toggle="tooltip" title="{{ button_remove }}" class="btn btn-danger">';
+                        html += '      <i class="fa fa-minus-circle"></i>';
+                        html += '    </button>';
+                        html += '  </td>';
+                        html += '</tr>';
+
+                        $('#attribute-value tbody').append(html);
+
+                        attribute_value_row++;
+                    }
+                </script>
+            ]]></add>
+        </operation>
+    </file>
+    <file path="admin/controller/catalog/product.php">
+        <operation>
+            <search><![CDATA[
+                $this->document->setTitle($this->language->get('heading_title'));
+            ]]></search>
+            <add position="after"><![CDATA[
+                // Add select2 js & css
+                $this->document->addStyle('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css');
+                $this->document->addScript('https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js');
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                $this->load->model('catalog/attribute');
+            ]]></search>
+            <add position="after"><![CDATA[
+                // Get all attributes
+                $all_attributes = $this->model_catalog_attribute->getAttributes();
+                $data['all_attributes'] = array();
+                foreach ($all_attributes as $attribute) {
+                    $attribute_info = $this->model_catalog_attribute->getAttribute($attribute['attribute_id']);
+                    $attribute_values = $this->model_catalog_attribute->getAttributeValueDescriptions($attribute['attribute_id']);
+                    $data['all_attributes'][] = array(
+                        'attribute_id'      => $attribute['attribute_id'],
+                        'name'              => $attribute_info['name'],
+                        'type'              => $attribute_info['type'],
+                        'attribute_values'  => $attribute_values,
+                    );
+                }
+            ]]></add>
+        </operation>        
+        <operation>
+            <search><![CDATA[
+                if ($attribute_info) {
+            ]]></search>
+            <add position="before"><![CDATA[
+                // Get attribute values
+                $product_attributes_values = $this->model_catalog_attribute->getAttributeValueDescriptions($product_attribute['attribute_id']);
+            ]]></add>
+        </operation>          
+        <operation>
+            <search><![CDATA[
+                $product_attribute['attribute_id'],
+            ]]></search>
+            <add position="after"><![CDATA[
+                // Get attribute type
+                'type'  => $attribute_info['type'],
+                'attribute_values' => $product_attributes_values,
+            ]]></add>
+        </operation>        
+    </file>
+    <file path="admin/view/template/catalog/product_form.twig">
+        <operation>
+            <search><![CDATA[
+                <tr id="attribute-row{{ attribute_row }}">
+            ]]></search>
+            <add position="replace"><![CDATA[
+                <tr id="attribute-row{{ attribute_row }}" data-type="{{ product_attribute.type }}">
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                <input type="text" name="product_attribute[{{ attribute_row }}][name]" value="{{ product_attribute.name }}" placeholder="{{ entry_attribute }}" class="form-control"/> <input type="hidden" name="product_attribute[{{ attribute_row }}][attribute_id]" value="{{ product_attribute.attribute_id }}"/>
+            ]]></search>
+            <add position="replace"><![CDATA[
+                <select name="product_attribute[{{ attribute_row }}][attribute_id]" class="form-control select2 product_attribute-id" style="width: 100%;">
+                    {% for attribute in all_attributes %}
+                        <option value="{{ attribute.attribute_id }}" {% if product_attribute.attribute_id == attribute.attribute_id %}selected{% endif %} data-type="{{ attribute.type }}">{{ attribute.name }}</option>
+                    {% endfor %}
+                </select>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                <textarea name="product_attribute[{{ attribute_row }}][product_attribute_description][{{ language.language_id }}][text]" rows="5" placeholder="{{ entry_text }}" class="form-control">{{ product_attribute.product_attribute_description[language.language_id] ? product_attribute.product_attribute_description[language.language_id].text }}</textarea>
+            ]]></search>
+            <add position="replace"><![CDATA[
+                {% if product_attribute.type == 'text' %}
+                    <input type="text" name="product_attribute[{{ attribute_row }}][product_attribute_description][{{ language.language_id }}][text]" placeholder="{{ entry_text }}" class="form-control input-value product_attribute-value" value="{{ product_attribute.product_attribute_description[language.language_id] ? product_attribute.product_attribute_description[language.language_id].text }}" />
+                {% elseif product_attribute.type == 'select' or product_attribute.type == 'radio' or product_attribute.type == 'checkbox' or product_attribute.type == 'image' %}
+                    <select name="product_attribute[{{ attribute_row }}][product_attribute_description][{{ language.language_id }}][text]" class="form-control product_attribute-value">
+                        {% set product_attribute_values = product_attribute.attribute_values %}
+                        {% for attribute_value in product_attribute_values %}
+                            {% set attribute_value = attribute_value.attribute_value_description[language.language_id] %}
+                            <option value="{{ attribute_value.name }}" {% if product_attribute.product_attribute_description[language.language_id] and product_attribute.product_attribute_description[language.language_id].text == attribute_value.name %}selected{% endif %}>
+                                {{ attribute_value.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                {% endif %}
+            ]]></add>
+        </operation>        
+        <!-- Change addAttribute to new -->
+        <operation>
+            <search><![CDATA[
+                <button type="button" onclick="addAttribute();" data-toggle="tooltip" title="{{ button_attribute_add }}" class="btn btn-primary">
+            ]]></search>
+            <add position="replace"><![CDATA[
+                <button type="button" onclick="addAttributeNew();" data-toggle="tooltip" title="{{ button_attribute_add }}" class="btn btn-primary">
+            ]]></add>
+        </operation>
+        <!-- Add script for select2 and attribute handling -->
+        <operation>
+            <search><![CDATA[
+                {{ footer }} 
+            ]]></search>
+            <add position="before"><![CDATA[
+                <script>
+                    // Initialize select2 for attributes
+                    $('.select2').select2({
+                        placeholder: '{{ entry_attribute }}'
+                    });
+
+                    // Handle attribute type change
+                    $('select.product_attribute-id').on('select2:select', function (e) {
+                        console.log('Attribute changed');
+
+                        const attributeId = e.params.data.id;
+                        const $row = $(this).closest('tr');
+                        const $valueCell = $row.find('td:nth-child(2)');
+                        console.log('valueCell:', $valueCell);
+                        const currentRow = $row.attr('id').replace('attribute-row', '');
+                        console.log('Current row:', currentRow);
+
+                        // Find data-type from selected option
+                        const type = $(this).find(':selected').data('type');
+                        console.log('Selected attribute type:', type);
+                        $row.attr('data-type', type);
+
+                        if (type === 'select' || type === 'radio' || type === 'checkbox' || type === 'image') {
+                            getAttributeValues(attributeId).then(function (values) {
+                                console.log('Attribute values:', values);
+                                let selectHtml = '';
+                                {% for language in languages %}
+                                    selectHtml += '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>';
+                                    selectHtml += '<select name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control">';
+                                    values.forEach(function (item) {
+                                        let description = item.attribute_value_description[{{language.language_id}}];
+                                        selectHtml += '<option value="' + description.name + '">' + description.name + '</option>';
+                                    });
+                                    selectHtml += '</select></div>';
+                                {% endfor %}
+                                $valueCell.html(selectHtml);
+                            }).catch(function (error) {
+                                console.error('Error loading attribute values:', error);
+                            });
+                        } else {
+                            $valueCell.html(
+                                {% for language in languages %}
+                                    '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>' +
+                                    '<input type="text" name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control" placeholder="{{ entry_text }}" /></div>'
+                                {% endfor %}
+                            );
+                        }
+                    });
+
+                    // Add new attribute function
+                    function addAttributeNew() {
+                        let currentRow = attribute_row;
+
+                        let html = '<tr id="attribute-row' + currentRow + '" data-type="text">';
+                        html += '<td class="text-left">';
+                        html += '<select name="product_attribute[' + currentRow + '][attribute_id]" id="product_attribute_' + currentRow + '" class="form-control select2 product_attribute-id" style="width: 100%;">';
+                        {% for attribute in all_attributes %}
+                            html += '<option value="{{ attribute.attribute_id }}" data-type="{{ attribute.type }}">{{ attribute.name }}</option>';
+                        {% endfor %}
+                        html += '</select>';
+                        html += '</td>';
+                        html += '<td class="text-left"></td>';
+                        html += '<td class="text-right"><button type="button" onclick="$(\'#attribute-row' + currentRow + '\').remove();" data-toggle="tooltip" title="{{ button_remove }}" class="btn btn-danger"><i class="fa fa-minus-circle"></i></button></td>';
+                        html += '</tr>';
+
+                        $('#attribute tbody').append(html);
+
+                        // Init select2
+                        $('.select2').select2();
+
+                        // Set attribute values for the new row
+                        const $newRow = $('#attribute-row' + currentRow);
+                        const $valueCell = $newRow.find('td:nth-child(2)');
+                        console.log('New valueCell:', $valueCell);
+                        const attributeId = $('#product_attribute_' + currentRow).val();
+                        console.log('New attribute ID:', attributeId);
+                        const type = $('#product_attribute_' + currentRow).find(':selected').data('type');
+                        console.log('New attribute type:', type);
+                        $newRow.attr('data-type', type);
+
+                        if (type === 'select' || type === 'radio' || type === 'checkbox' || type === 'image') {
+                            getAttributeValues(attributeId).then(function (values) {
+                                console.log('New attribute values:', values);
+                                let selectHtml = '';
+                                {% for language in languages %}
+                                    selectHtml += '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>';
+                                    selectHtml += '<select name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control">';
+                                    values.forEach(function (item) {
+                                        let description = item.attribute_value_description[{{language.language_id}}];
+                                        selectHtml += '<option value="' + description.name + '">' + description.name + '</option>';
+                                    });
+                                    selectHtml += '</select></div>';
+                                {% endfor %}
+                                $valueCell.html(selectHtml);
+                            }).catch(function (error) {
+                                console.error('Error loading attribute values:', error);
+                            });
+                        } else {
+                            $valueCell.html(
+                                {% for language in languages %}
+                                    '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>' +
+                                    '<input type="text" name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control" placeholder="{{ entry_text }}" /></div>'
+                                {% endfor %}
+                            );
+                        }
+
+
+                        // Handle attribute type change for new row
+                        $('#product_attribute_' + currentRow).on('select2:select', function (e) {
+                            console.log ('Attribute type changed for new row');
+
+                            const attributeId = e.params.data.id;
+                            const $row = $('#attribute-row' + currentRow);
+                            const $valueCell = $row.find('td:nth-child(2)');
+                            console.log('valueCell:', $valueCell);
+
+                            // Find data-type from selected option
+                            const type = $(this).find(':selected').data('type');
+                            $row.attr('data-type', type);
+
+                            if (type === 'select' || type === 'radio' || type === 'checkbox' || type === 'image') {
+                                getAttributeValues(attributeId).then(function (values) {
+                                    console.log('New attribute values:', values);
+                                    let selectHtml = '';
+                                    {% for language in languages %}
+                                        selectHtml += '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>';
+                                        selectHtml += '<select name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control">';
+                                        values.forEach(function (item) {
+                                            let description = item.attribute_value_description[{{language.language_id}}];
+                                            selectHtml += '<option value="' + description.name + '">' + description.name + '</option>';
+                                        });
+                                        selectHtml += '</select></div>';
+                                    {% endfor %}
+                                    $valueCell.html(selectHtml);
+                                }).catch(function (error) {
+                                    console.error('Error loading attribute values:', error);
+                                });
+                            } else {
+                                $valueCell.html(
+                                    {% for language in languages %}
+                                        '<div class="input-group"><span class="input-group-addon"><img src="language/{{ language.code }}/{{ language.code }}.png" title="{{ language.name }}" /></span>' +
+                                        '<input type="text" name="product_attribute[' + currentRow + '][product_attribute_description][{{ language.language_id }}][text]" class="form-control" placeholder="{{ entry_text}}" /></div>'
+                                    {% endfor %}
+                                );
+                            }   
+                        });
+
+                        attribute_row++;
+                    }
+
+                    // Get attribute values
+                    function getAttributeValues(attributeId) {
+                        return new Promise(function (resolve, reject) {
+
+                            const xhr = new XMLHttpRequest();
+                            xhr.open('GET', 'index.php?route=catalog/attribute/getAttributeValues&user_token={{ user_token }}&attribute_id=' + attributeId, true);
+                            xhr.responseType = 'json';
+
+                            xhr.onload = function () {
+                                if (xhr.status >= 200 && xhr.status < 300) {
+                                    resolve(xhr.response);
+                                } else {
+                                    reject(new Error('Failed to fetch attribute values, status: ' + xhr.status));
+                                }
+                            };
+
+                            xhr.onerror = function () {
+                                reject(new Error('Network error while fetching attribute values'));
+                            };
+
+                            xhr.send();
+                        });
+                    }
+                </script>
+            ]]></add>
+        </operation>
+        <operation>
+            <search><![CDATA[
+                attributeautocomplete(index);
+            ]]></search>
+            <add position="replace"><![CDATA[
+                // attributeautocomplete(index);
+            ]]></add>
+        </operation>
+    </file>
+</modification>

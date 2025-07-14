@@ -69,6 +69,7 @@ class ControllerExtensionModuleXDAttributeValue extends Controller
             $sql = "CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "attribute_value` (
                 `attribute_value_id` INT(11) NOT NULL AUTO_INCREMENT,
                 `attribute_id` INT(11) NOT NULL,
+                `image` VARCHAR(255) NOT NULL DEFAULT '',
                 `sort_order` INT(3) NOT NULL DEFAULT '0',
                 PRIMARY KEY (`attribute_value_id`)
             ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
@@ -80,9 +81,17 @@ class ControllerExtensionModuleXDAttributeValue extends Controller
             $sql = "CREATE TABLE IF NOT EXISTS `" . DB_PREFIX . "attribute_value_description` (
                 `attribute_value_id` INT(11) NOT NULL,
                 `language_id` INT(11) NOT NULL,
+                `attribute_id` INT(11) NOT NULL,
                 `name` VARCHAR(255) NOT NULL,
                 PRIMARY KEY (`attribute_value_id`, `language_id`)
             ) ENGINE=MyISAM DEFAULT CHARSET=utf8 COLLATE=utf8_general_ci;";
+            $this->db->query($sql);
+        }
+
+        // Add new column type to attribute table if it does not exist
+        $sql = "SHOW COLUMNS FROM `" . DB_PREFIX . "attribute` LIKE 'type'";
+        if (count($this->db->query($sql)->rows) == 0) {
+            $sql = "ALTER TABLE `" . DB_PREFIX . "attribute` ADD `type` VARCHAR(32) NOT NULL DEFAULT 'text' AFTER `attribute_group_id`";
             $this->db->query($sql);
         }
     }
@@ -91,6 +100,10 @@ class ControllerExtensionModuleXDAttributeValue extends Controller
     {
         $this->db->query("DROP TABLE IF EXISTS `" . DB_PREFIX . "attribute_value`");
         $this->db->query("DROP TABLE IF EXISTS `" . DB_PREFIX . "attribute_value_description`");
+        $sql = "SHOW COLUMNS FROM `" . DB_PREFIX . "attribute` LIKE 'type'";
+        if (count($this->db->query($sql)->rows) > 0) {
+            $this->db->query("ALTER TABLE `" . DB_PREFIX . "attribute` DROP `type`");
+        }
     }
 
     protected function validate()

@@ -55,7 +55,9 @@
 /catalog/
 
 
-/system/
+/system/*
+!/system/
+!/system/xd_attribute_value.ocmod.xml
 
 
 /image/
