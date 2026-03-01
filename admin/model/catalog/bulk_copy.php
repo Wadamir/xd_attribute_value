@@ -147,7 +147,7 @@ class ModelCatalogBulkCopy extends Model
 
 
 
-    public function copyProduct($product_id, $attribute_id, $attribute_value, $products_status = 0, $products_title = 0)
+    public function copyProduct($product_id, $attribute_id, $attribute_value, $products_status = 0, $products_title = 0, $products_meta_title = 0, $use_attribute_name = 0, $product_name_prefix = '', $product_name_suffix = '', $title_separator = ',')
     {
         $query = $this->db->query("SELECT DISTINCT * FROM " . DB_PREFIX . "product p WHERE p.product_id = '" . (int)$product_id . "'");
 
@@ -190,10 +190,16 @@ class ModelCatalogBulkCopy extends Model
 
             $data['product_description'] = $this->getProductDescriptions($product_id);
             $products_title = (int)$products_title;
+            $products_meta_title = (int)$products_meta_title;
+            $use_attribute_name = (int)$use_attribute_name;
+            $product_name_prefix = (string)$product_name_prefix;
+            $product_name_suffix = (string)$product_name_suffix;
+            $separator_text = $this->getTitleSeparatorText($title_separator);
+            $new_attribute_description = $this->getAttributeDescription($attribute_id);
+            $has_name_wrap = ($product_name_prefix !== '' || $product_name_suffix !== '');
 
-            if ($products_title) {
+            if ($products_title || $products_meta_title || $has_name_wrap) {
                 $new_product_description = [];
-                $new_attribute_description = $this->getAttributeDescription($attribute_id);
                 foreach ($data['product_description'] as $language_id => $description) {
                     $new_product_description[$language_id] = [
                         'name' => $description['name'],
@@ -203,13 +209,41 @@ class ModelCatalogBulkCopy extends Model
                         'meta_keyword' => $description['meta_keyword'],
                         'tag' => $description['tag']
                     ];
+                    if ($has_name_wrap) {
+                        $new_product_description[$language_id]['name'] = $product_name_prefix . $new_product_description[$language_id]['name'] . $product_name_suffix;
+                    }
                     // if (isset($new_attribute_description[$language_id])) {
                     //     $new_product_description[$language_id]['name'] .= ', ' . $new_attribute_description[$language_id]['name'];
                     //     $new_product_description[$language_id]['meta_title'] .= ', ' . $new_attribute_description[$language_id]['name'];
                     // }
-                    if (isset($new_attribute_value[$language_id])) {
-                        $new_product_description[$language_id]['name'] .= ', ' . $new_attribute_value[$language_id]['text'];
-                        $new_product_description[$language_id]['meta_title'] .= ', ' . $new_attribute_value[$language_id]['text'];
+                    $append_text = '';
+                    $attribute_name = isset($new_attribute_description[$language_id]['name'])
+                        ? $new_attribute_description[$language_id]['name']
+                        : '';
+                    $attribute_value_text = isset($new_attribute_value[$language_id]['text'])
+                        ? $new_attribute_value[$language_id]['text']
+                        : '';
+
+                    if ($use_attribute_name) {
+                        if ($attribute_name !== '' && $attribute_value_text !== '') {
+                            $append_text = $attribute_name . ': ' . $attribute_value_text;
+                        } elseif ($attribute_name !== '') {
+                            $append_text = $attribute_name;
+                        } else {
+                            $append_text = $attribute_value_text;
+                        }
+                    } else {
+                        $append_text = $attribute_value_text;
+                    }
+
+                    if ($append_text !== '') {
+                        if ($products_title) {
+                            $new_product_description[$language_id]['name'] .= $separator_text . $append_text;
+                        }
+
+                        if ($products_meta_title) {
+                            $new_product_description[$language_id]['meta_title'] .= $separator_text . $append_text;
+                        }
                     }
                 }
                 $data['product_description'] = $new_product_description;
@@ -230,6 +264,21 @@ class ModelCatalogBulkCopy extends Model
 
             return $this->addProduct($data);
         }
+    }
+
+    private function getTitleSeparatorText($separator)
+    {
+        $allowed = [',', '.', '/', '-'];
+
+        if (!in_array($separator, $allowed, true)) {
+            $separator = ',';
+        }
+
+        if ($separator === ',' || $separator === '.') {
+            return $separator . ' ';
+        }
+
+        return ' ' . $separator . ' ';
     }
 
     private function getAttributeDescription($attribute_id)

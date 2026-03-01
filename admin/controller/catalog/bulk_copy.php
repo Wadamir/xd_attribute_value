@@ -189,6 +189,31 @@ class ControllerCatalogBulkCopy extends Controller
             ? (int)$this->request->post['products_title']
             : 0;
 
+        $products_meta_title = isset($this->request->post['products_meta_title'])
+            ? (int)$this->request->post['products_meta_title']
+            : 0;
+
+        $use_attribute_name = isset($this->request->post['use_attribute_name'])
+            ? (int)$this->request->post['use_attribute_name']
+            : 0;
+
+        $product_name_prefix = isset($this->request->post['product_name_prefix'])
+            ? (string)$this->request->post['product_name_prefix']
+            : '';
+
+        $product_name_suffix = isset($this->request->post['product_name_suffix'])
+            ? (string)$this->request->post['product_name_suffix']
+            : '';
+
+        $title_separator = isset($this->request->post['title_separator'])
+            ? (string)$this->request->post['title_separator']
+            : ',';
+
+        $allowed_separators = [',', '.', '/', '-'];
+        if (!in_array($title_separator, $allowed_separators, true)) {
+            $title_separator = ',';
+        }
+
         $bulk_add_type = isset($this->request->post['bulk_add_type'])
             ? (int)$this->request->post['bulk_add_type']
             : 0;
@@ -200,6 +225,11 @@ class ControllerCatalogBulkCopy extends Controller
             'product_attribute_values' => $product_attribute_values,
             'products_status'        => $products_status,
             'products_title'         => $products_title,
+            'products_meta_title'    => $products_meta_title,
+            'use_attribute_name'     => $use_attribute_name,
+            'product_name_prefix'    => $product_name_prefix,
+            'product_name_suffix'    => $product_name_suffix,
+            'title_separator'        => $title_separator,
             'bulk_add_type'          => $bulk_add_type
         ];
 
@@ -227,7 +257,12 @@ class ControllerCatalogBulkCopy extends Controller
                     $attribute_id,
                     $value_id,
                     $products_status,
-                    $products_title
+                    $products_title,
+                    $products_meta_title,
+                    $use_attribute_name,
+                    $product_name_prefix,
+                    $product_name_suffix,
+                    $title_separator
                 );
 
                 if ($copy_product_result) {

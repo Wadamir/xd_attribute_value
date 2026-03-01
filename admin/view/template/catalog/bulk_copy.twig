@@ -69,7 +69,7 @@
         if (!btnBulkCopyModal) {
             console.error('Button with id "btnBulkCopyModal" not found.');
             return;
-        }        
+        }
 
 
 
@@ -302,12 +302,36 @@
             // - renders checkboxes and per-product preview in #product-new-attributes-{productId}
             updateNewProductsList();
 
-
-            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_status" class="checkbox-input" name="products_status" value="1" checked /><label for="products_status" class="checkbox-label">{{ text_products_status }}</label></div>`;
-            formBulkCopy.innerHTML     += `<hr class="my-1">`;
-
             formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_title" class="checkbox-input" name="products_title" value="1" checked /><label for="products_title" class="checkbox-label">{{ text_products_title }}</label></div>`;
             formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_meta_title" class="checkbox-input" name="products_meta_title" value="1" checked /><label for="products_meta_title" class="checkbox-label">{{ text_products_meta_title }}</label></div>`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<p class="text-description small">{{ text_product_name_prefix }}</p>`;
+            formBulkCopy.innerHTML     += `<input type="text" name="product_name_prefix" id="product_name_prefix" class="form-control w-100" value="" />`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<p class="text-description small">{{ text_product_name_suffix }}</p>`;
+            formBulkCopy.innerHTML     += `<input type="text" name="product_name_suffix" id="product_name_suffix" class="form-control w-100" value="" />`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="use_attribute_name" class="checkbox-input" name="use_attribute_name" value="1" /><label for="use_attribute_name" class="checkbox-label">{{ text_use_attribute_name }}</label></div>`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<p class="text-description small">{{ text_title_separator }}</p>`;
+
+            let titleSeparatorSelectHtml = `<select name="title_separator" id="title_separator" class="form-control w-100">`;
+            titleSeparatorSelectHtml     += `<option value="," selected>,</option>`;
+            titleSeparatorSelectHtml     += `<option value=".">.</option>`;
+            titleSeparatorSelectHtml     += `<option value="/">/</option>`;
+            titleSeparatorSelectHtml     += `<option value="-">-</option>`;
+            titleSeparatorSelectHtml     += `</select>`;
+            formBulkCopy.innerHTML       += titleSeparatorSelectHtml;
+            formBulkCopy.innerHTML       += `<hr class="my-1 strong">`;
+
+            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_status" class="checkbox-input" name="products_status" value="1" checked /><label for="products_status" class="checkbox-label">{{ text_products_status }}</label></div>`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;            
 
             formBulkCopy.innerHTML     += `<p class="text-description small">{{ text_add_type }}</p>`;
 
@@ -543,10 +567,10 @@
                     let listHtml = `<p class="text-description small">{{ text_new_products }}</p>`;
 
                     // Select / deselect all checkbox
-                    listHtml += `<div class="checkbox-item my-2"><input type="checkbox" id="select_all_attribute_values_${productId}" class="checkbox-input" name="select_all_attribute_values_${productId}" value="1" checked /><label for="select_all_attribute_values_${productId}" class="checkbox-label text-description">{{ text_select_all_values }}</label></div>`;
+                    listHtml += `<div class="checkbox-item my-1"><input type="checkbox" id="select_all_attribute_values_${productId}" class="checkbox-input" name="select_all_attribute_values_${productId}" value="1" checked /><label for="select_all_attribute_values_${productId}" class="checkbox-label text-description">{{ text_select_all_values }}</label></div>`;
                     listHtml += '<div class="list-unstyled list-rounded">';
                     data.attribute_values.forEach(value => {
-                        listHtml += `<div class="checkbox-item"><input type="checkbox" id="attribute_value_${value.value_id}_product_${productId}" class="checkbox-input attribute_values" name="product_attribute_values[${productId}][]" value="${value.value_id}" checked /><label for="attribute_value_${value.value_id}_product_${productId}" class="checkbox-label">${productName}, ${value.name}</label></div>`;
+                        listHtml += `<div class="checkbox-item"><input type="checkbox" id="attribute_value_${value.value_id}_product_${productId}" class="checkbox-input attribute_values" name="product_attribute_values[${productId}][]" value="${value.value_id}" checked /><label for="attribute_value_${value.value_id}_product_${productId}" class="checkbox-label">${value.name}</label></div>`;
                     });
                     listHtml += '</div>';
 
