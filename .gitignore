@@ -13,6 +13,10 @@
 !/admin/controller/extension/module/
 !/admin/controller/extension/module/xd_attribute_value.php
 
+/admin/controller/catalog/*
+!/admin/controller/catalog/
+!/admin/controller/catalog/bulk_copy.php
+
 /admin/language/*
 !/admin/language/
 /admin/language/en-gb/*
@@ -23,6 +27,10 @@
 !/admin/language/en-gb/extension/module/
 !/admin/language/en-gb/extension/module/xd_attribute_value.php
 
+/admin/language/en-gb/catalog/*
+!/admin/language/en-gb/catalog/
+!/admin/language/en-gb/catalog/bulk_copy.php
+
 /admin/language/ru-ru/*
 !/admin/language/ru-ru/
 /admin/language/ru-ru/extension/*
@@ -30,6 +38,18 @@
 /admin/language/ru-ru/extension/module/*
 !/admin/language/ru-ru/extension/module/
 !/admin/language/ru-ru/extension/module/xd_attribute_value.php
+
+/admin/language/ru-ru/catalog/*
+!/admin/language/ru-ru/catalog/
+!/admin/language/ru-ru/catalog/bulk_copy.php
+
+
+/admin/model/*
+!/admin/model/
+/admin/model/catalog/*
+!/admin/model/catalog/
+!/admin/model/catalog/bulk_copy.php
+
 
 /admin/view/*
 !/admin/view/
@@ -50,7 +70,11 @@
 /admin/view/stylesheet/*
 !/admin/view/stylesheet/
 !/admin/view/stylesheet/xd_attribute_value.css
+!/admin/view/stylesheet/bulk_copy.css
 
+/admin/view/template/catalog/*
+!/admin/view/template/catalog/
+!/admin/view/template/catalog/bulk_copy.twig
 
 /catalog/
 

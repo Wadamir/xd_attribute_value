@@ -1,0 +1,212 @@
+/* Сброс стилей для всех элементов */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+/* Определение CSS-переменных для кастомных чекбоксов */
+:root {
+    --itc-body-bg: #fff; /* Цвет фона */
+    --itc-border-color: #dee2e6; /* Цвет границы */
+    --itc-checkbox-color: #1e91cf; /* Цвет активного состояния */
+    --itc-disabled-opacity: 0.5; /* Прозрачность отключенного чекбокса */
+
+    /* Размеры и стили оформления */
+    --itc-border-width: 1px; /* Толщина границы */
+    --itc-checkbox-size: 13px; /* Размер чекбокса */
+    --itc-checkbox-gap: 5px; /* Расстояние между чекбоксом и текстом */
+    --itc-radius: 2px; /* Радиус скругления */
+    --itc-transition:
+        color 0.15s ease-in-out, background-color 0.15s ease-in-out,
+        border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out; /* Плавные анимации */
+}
+
+#bulkCopyModal .m-0 {
+    margin: 0;
+}
+
+#bulkCopyModal .mb-0 {
+    margin-bottom: 0;
+}
+
+#bulkCopyModal .mt-0 {
+    margin-top: 0;
+}
+
+#bulkCopyModal .my-1 {
+    margin: 1rem 0 !important;
+}
+
+#bulkCopyModal .mt-1 {
+    margin-top: 1rem;
+}
+
+#bulkCopyModal .mb-1 {
+    margin-bottom: 1rem;
+}
+
+#bulkCopyModal .my-2 {
+    margin: 2rem 0 !important;
+}
+
+#bulkCopyModal .p-0 {
+    padding: 0;
+}
+
+#bulkCopyModal .p-1 {
+    padding: 1rem;
+}
+
+#bulkCopyModal hr.strong {
+    border-color: #000;
+    border-width: 2px;
+}
+
+#bulkCopyModal input[type='checkbox']:checked::after,
+#bulkCopyModal .checkbox input[type='checkbox']:checked::after,
+#bulkCopyModal .checkbox-inline input[type='checkbox']:checked::after {
+    content: none;
+}
+
+#bulkCopyModal .text-description {
+    margin: 0;
+    margin-bottom: 0.25em;
+
+    padding: 0;
+
+    color: #6c757d;
+
+    font-size: 0.9em;
+    font-style: italic;
+    font-weight: 600;
+}
+
+#bulkCopyModal .product-title {
+    font-size: 1.15em;
+}
+
+/* Оформление контейнера для чекбоксов */
+#bulkCopyModal .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    max-width: 320px;
+    padding: 1.5rem;
+    background: var(--itc-body-bg);
+    border: var(--itc-border-width) solid var(--itc-border-color);
+    border-radius: var(--itc-radius);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Контейнер для каждого чекбокса */
+#bulkCopyModal .checkbox-item {
+    margin: 0;
+    margin-bottom: 5px;
+    padding: 0;
+
+    display: flex;
+    align-items: center;
+    gap: var(--itc-checkbox-gap);
+    position: relative;
+}
+
+/* Стилизация чекбокса */
+#bulkCopyModal .checkbox-input {
+    appearance: none;
+    width: var(--itc-checkbox-size);
+    height: var(--itc-checkbox-size);
+    border: var(--itc-border-width) solid var(--itc-border-color);
+    border-radius: 0.25rem;
+    background-color: var(--itc-body-bg);
+    background-image: var(--itc-checkbox-bg-image);
+    cursor: pointer;
+    transition: var(--itc-transition);
+    margin: 0;
+}
+
+/* Эффект нажатия */
+#bulkCopyModal .checkbox-input:active {
+    filter: brightness(90%);
+}
+
+/* Смена цвета границы при наведении */
+#bulkCopyModal .checkbox-input:hover:not(:disabled) {
+    border-color: var(--itc-checkbox-color);
+}
+
+/* Стили для чекбокса при фокусе */
+#bulkCopyModal .checkbox-input:focus {
+    border-color: var(--itc-checkbox-color);
+    outline: none;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+/* Оформление состояния checked и indeterminate */
+#bulkCopyModal .checkbox-input:checked,
+#bulkCopyModal .checkbox-input:indeterminate {
+    background-color: var(--itc-checkbox-color);
+    border-color: var(--itc-checkbox-color);
+    background-image: var(--itc-checkbox-bg-image);
+}
+
+/* Иконка галочки при выборе чекбокса */
+#bulkCopyModal .checkbox-input:checked {
+    --itc-checkbox-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='m6 10 3 3 6-6'/%3e%3c/svg%3e");
+}
+
+/* Иконка для неопределенного состояния */
+#bulkCopyModal .checkbox-input:indeterminate {
+    --itc-checkbox-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10h8'/%3e%3c/svg%3e");
+}
+
+/* Стили метки чекбокса */
+#bulkCopyModal .checkbox-label {
+    margin: 0;
+    padding: 0;
+
+    cursor: pointer;
+    user-select: none;
+
+    font-weight: 400;
+}
+
+/* Отключенный чекбокс */
+#bulkCopyModal .checkbox-input:disabled {
+    filter: none;
+    opacity: var(--itc-disabled-opacity);
+    cursor: not-allowed;
+}
+
+#bulkCopyModal .checkbox-input:disabled ~ .checkbox-label {
+    opacity: var(--itc-disabled-opacity);
+    cursor: not-allowed;
+}
+
+/* Скрытый элемент для доступности */
+#bulkCopyModal .visually-hidden {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+#bulkCopyModal .text-danger {
+    color: #dc3545;
+    font-weight: 600;
+    font-style: italic;
+    font-size: 1.15em;
+    margin-top: 1rem;
+}
+
+@media (min-width: 1200px) {
+    #bulkCopyModal .modal-dialog {
+        width: 800px;
+        margin: 30px auto;
+    }
+}

@@ -643,4 +643,37 @@
             ]]></add>
         </operation>
     </file>
+    <file path="admin/controller/catalog/product.php">
+        <operation>
+            <search error="log"><![CDATA[
+                $data['order'] = $order;
+            ]]></search>
+            <add position="after"><![CDATA[
+                // Add bulk copy modal
+                $data['bulk_copy_modal'] = $this->load->controller('catalog/bulk_copy');
+            ]]></add>
+        </operation>
+    </file>
+    <file path="admin/view/template/catalog/product_list.twig">
+        <operation>
+            <search><![CDATA[
+                <button type="submit" form="form-product" formaction="{{ copy }}" data-toggle="tooltip" title="{{ button_copy }}" class="btn btn-default">
+            ]]></search>
+            <add position="before"><![CDATA[
+                <button type="button" id="btnBulkCopyModal" class="btn btn-success" data-toggle="tooltip" title="{{ button_bulk_copy }}">
+					<i class="fa fa-copy"></i>
+				</button>
+            ]]></add>
+        </operation>
+        <operation>
+            <search error="log"><![CDATA[
+                {{ footer }}
+            ]]></search>
+            <add position="before"><![CDATA[
+                <!-- Modal for Bulk Copy -->
+                    {{ bulk_copy_modal }}
+                <!-- Modal End -->
+            ]]></add>
+        </operation>
+    </file>
 </modification>

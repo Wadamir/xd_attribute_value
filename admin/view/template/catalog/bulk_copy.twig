@@ -1,0 +1,621 @@
+<!-- Modal -->
+<div class="modal fade" id="bulkCopyModal" tabindex="-1" role="dialog" aria-labelledby="bulkCopyModalLabel">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<h3 class="modal-title" id="bulkCopyModalLabel">{{ heading_title }}</h3>
+			</div>
+			<div class="modal-body">
+                <form id="bulk_copy_product" class="form-horizontal">
+                    <p id="bulkCopyLoading" class="text-muted small">{{ text_loading }}</p>                
+                    <div id="newProductsList"></div>
+                    <div class="m-0">
+                        <p id="bulkCopyError" class="text-danger" style="display: none;"></p>
+                    </div>                    
+                </form>
+            </div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">{{ text_cancel }}</button>
+				<button type="button" id="bulk_copy_btn" class="btn btn-primary">{{ text_copy }}</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="bulkCopyModalError" tabindex="-1" role="dialog" aria-labelledby="bulkCopyModalLabelError">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<h3 class="modal-title" id="bulkCopyModalLabelError">{{ heading_title }}</h3>
+			</div>
+			<div class="modal-body">
+                <h5 class="text-danger m-0">{{ text_loading }}</h5>
+            </div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">{{ text_cancel }}</button>
+			</div>
+		</div>
+	</div>
+</div>
+<!-- Modal -->
+<div class="modal fade" id="bulkCopyModalSuccess" tabindex="-1" role="dialog" aria-labelledby="bulkCopyModalLabelSuccess">
+	<div class="modal-dialog" role="document">
+		<div class="modal-content">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-label="Close">
+					<span aria-hidden="true">&times;</span>
+				</button>
+				<h3 class="modal-title" id="bulkCopyModalLabelSuccess">{{ heading_title }}</h3>
+			</div>
+			<div class="modal-body">
+                <h5 class="text-success m-0">{{ text_loading }}</h5>
+            </div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-default" data-dismiss="modal">{{ text_cancel }}</button>
+			</div>
+		</div>
+	</div>
+</div>
+<script>
+	document.addEventListener('DOMContentLoaded', function () {
+        const btnBulkCopyModal = document.getElementById('btnBulkCopyModal');
+
+        if (!btnBulkCopyModal) {
+            console.error('Button with id "btnBulkCopyModal" not found.');
+            return;
+        }        
+
+
+
+        btnBulkCopyModal.addEventListener('click', async function () {
+            // Get main product list form (admin product list)
+            const formProduct = document.getElementById('form-product');
+            if (!formProduct) {
+                console.error('Form with id "form-product" not found.');
+                return;
+            }
+
+            // Collect selected product IDs from main list
+            const selectedProducts = Array.from(
+                formProduct.querySelectorAll('input[name="selected[]"]:checked')
+            ).map(input => input.value);
+
+            // Validate selected products count
+            if (selectedProducts.length === 0) {
+                const errorTextEl = document.querySelector('#bulkCopyModalError .modal-body .text-danger');
+                if (errorTextEl) {
+                    errorTextEl.textContent = '{{ text_no_products }}';
+                }
+                $('#bulkCopyModalError').modal('show');
+                return;
+            } else if (selectedProducts.length > 10) {
+                const errorTextEl = document.querySelector('#bulkCopyModalError .modal-body .text-danger');
+                if (errorTextEl) {
+                    errorTextEl.textContent = '{{ text_max_10_products }}';
+                }
+                $('#bulkCopyModalError').modal('show');
+                return;
+            }
+
+            // Get modal form that will be filled dynamically
+            const formBulkCopy = document.getElementById('bulk_copy_product');
+            if (!formBulkCopy) {
+                console.error('Form with id "bulk_copy_product" not found.');
+                return;
+            }
+
+            let attributes = [];
+
+            try {
+                // 1) Fetch available attributes BEFORE loading products
+                attributes = await fetchAttributes();
+
+                // If there are no suitable attributes, show error and stop
+                if (!attributes.length) {
+                    const errorTextEl = document.querySelector('#bulkCopyModalError .modal-body .text-danger');
+                    if (errorTextEl) {
+                        errorTextEl.textContent = '{{ text_no_attributes }}';
+                    }
+                    $('#bulkCopyModalError').modal('show');
+                    return;
+                }
+            } catch (err) {
+                // Global attributes fetch error
+                console.error('Error fetching attributes:', err);
+                const errorTextEl = document.querySelector('#bulkCopyModalError .modal-body .text-danger');
+                if (errorTextEl) {
+                    errorTextEl.textContent = '{{ text_error_fetching_attributes }}';
+                }
+                $('#bulkCopyModalError').modal('show');
+                return;
+            }
+
+            // 2) Prepare modal initial content: attributes select + products container
+            //    Attributes block must be shown BEFORE products list
+            let attributesHtml  = `<p class="text-description small">{{ text_choose_attributes }}</p>`;
+            attributesHtml     += `<select name="bulk_copy_attribute" id="bulk_copy_attribute" class="form-control w-100 disabled" disabled>`;
+
+            attributes.forEach(attr => {
+                attributesHtml += `<option value="${attr.attribute_id}">${attr.name}</option>`;
+            });
+
+            attributesHtml += `</select>`;
+            attributesHtml += `<hr class="my-1 strong">`;
+
+            // Now add products container + loading + error area
+            const baseHtml = `
+                ${attributesHtml}
+                <p class="text-description small">{{ text_selected_products }}</p>
+                <div id="newProductsList"></div>
+                <p id="bulkCopyLoading" class="text-muted small">{{ text_loading }}</p>
+                <div class="m-0">
+                    <p id="bulkCopyError" class="text-danger" style="display: none;"></p>
+                </div>
+            `;
+
+            formBulkCopy.innerHTML = baseHtml;
+
+            const loadingEl         = document.getElementById('bulkCopyLoading');
+            const productsContainer = document.getElementById('newProductsList');
+            const bulkCopyErrorEl   = document.getElementById('bulkCopyError');
+
+            const bulkCopySubmitBtn = document.getElementById('bulk_copy_btn');           
+
+            // Disable submit button while loading products
+            if (bulkCopySubmitBtn) {
+                bulkCopySubmitBtn.disabled = true;
+                bulkCopySubmitBtn.classList.add('disabled');
+            }
+
+            // Clear previous errors
+            if (bulkCopyErrorEl) {
+                bulkCopyErrorEl.style.display = 'none';
+                bulkCopyErrorEl.textContent = '';
+            }
+
+            // Show modal immediately with attributes + loading state
+            $('#bulkCopyModal').modal('show');
+
+            // 3) Create placeholders for products in the same order as selected
+            selectedProducts.forEach((productId, index) => {
+                // Create placeholder block for this product to keep stable order
+                const placeholderHtml = `
+                    <div class="bulk-copy-product-item"
+                        id="bulk_copy_product_item_${productId}"
+                        data-product_id="${productId}">
+                        <input type="hidden" name="product_id[]" value="${productId}">
+                        <p class="text-description small">{{ text_selected_product }} #${index + 1}</p>
+                        <p class="product-title text-muted">{{ text_loading }}</p>
+                        <div id="product-new-attributes-${productId}"></div>
+                        <hr class="my-1">
+                    </div>
+                `;
+                productsContainer.insertAdjacentHTML('beforeend', placeholderHtml);
+            });
+
+            // 4) Load all product info in parallel using Promise.allSettled
+            const failedProducts = [];
+            let successCount = 0;
+
+            try {
+                const productPromises = selectedProducts.map(productId => fetchProductInfo(productId));
+                const results = await Promise.allSettled(productPromises);
+
+                results.forEach((result, index) => {
+                    const productId = selectedProducts[index];
+                    const itemContainerId = 'bulk_copy_product_item_' + productId;
+                    const itemContainer   = document.getElementById(itemContainerId);
+
+                    if (result.status === 'fulfilled' && result.value) {
+                        const productInfo = result.value;
+                        successCount++;
+
+                        if (!itemContainer) {
+                            return;
+                        }
+
+                        // Replace placeholder content with real product info
+                        itemContainer.innerHTML = `
+                            <input type="hidden" name="product_id[]" value="${productInfo.product_id}">
+                            <p class="text-description small">{{ text_selected_product }} #${index + 1}</p>
+                            <p class="product-title">${productInfo.name}</p>
+                            <div id="product-new-attributes-${productInfo.product_id}"></div>
+                            <hr class="my-1">
+                        `;
+                    } else {
+                        // Product info failed to load
+                        failedProducts.push(productId);
+                        console.error('Error fetching product info for product ID:', productId, result.reason);
+
+                        // Optionally you can show some error marker inside the product block
+                        if (itemContainer) {
+                            itemContainer.innerHTML += `
+                                <p class="text-danger small">{{ text_error_fetching_info }}</p>
+                            `;
+                        }
+                    }
+                });
+
+                // Remove last HR inside the final product block
+                const lastProductId = selectedProducts[selectedProducts.length - 1];
+                const lastContainer = document.getElementById('bulk_copy_product_item_' + lastProductId);
+
+                if (lastContainer) {
+                    const lastHr = lastContainer.querySelector('hr.my-1');
+                    if (lastHr) lastHr.classList.add('strong');
+                }                
+
+            } catch (err) {
+                // This catch is mostly for unexpected global errors
+                console.error('Unexpected error while fetching products:', err);
+            }
+
+            // 5) Finalize UI after all products are processed
+
+            // Hide loading label
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+
+            // If all products failed, close this modal and show global error
+            if (successCount === 0) {
+                $('#bulkCopyModal').modal('hide');
+
+                const errorTextEl = document.querySelector('#bulkCopyModalError .modal-body .text-danger');
+                if (errorTextEl) {
+                    errorTextEl.textContent = '{{ text_error_all_products_failed }}';
+                }
+
+                $('#bulkCopyModalError').modal('show');
+                return;
+            }
+
+            // If some products failed, show warning BELOW products list
+            if (failedProducts.length) {
+                const warnHtml = `
+                    <p class="text-danger small mt-2">
+                        {{ text_some_products_failed }}: ${failedProducts.join(', ')}
+                    </p>
+                    <hr class="my-1">
+                `;
+                productsContainer.insertAdjacentHTML('beforeend', warnHtml);
+            }
+
+            // Enable attribute select now that products are loaded
+            const attributeSelectFinal = document.getElementById('bulk_copy_attribute');
+            if (attributeSelectFinal) {
+                attributeSelectFinal.disabled = false;
+                attributeSelectFinal.classList.remove('disabled');
+            }
+
+            // Build per-product attribute combinations preview once all products are ready
+            // updateNewProductsList():
+            // - reads selected attribute from #bulk_copy_attribute
+            // - reads .bulk-copy-product-item from #newProductsList
+            // - fetches attribute values
+            // - renders checkboxes and per-product preview in #product-new-attributes-{productId}
+            updateNewProductsList();
+
+
+            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_status" class="checkbox-input" name="products_status" value="1" checked /><label for="products_status" class="checkbox-label">{{ text_products_status }}</label></div>`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<div class="checkbox-item"><input type="checkbox" id="products_title" class="checkbox-input" name="products_title" value="1" checked /><label for="products_title" class="checkbox-label">{{ text_products_title }}</label></div>`;
+            formBulkCopy.innerHTML     += `<hr class="my-1">`;
+
+            formBulkCopy.innerHTML     += `<p class="text-description small">{{ text_add_type }}</p>`;
+
+            let bulkTypeSelectHtml      = `<select name="bulk_add_type" id="bulk_add_type" class="form-control w-100">`;
+            bulkTypeSelectHtml          += `<option value="0">{{ text_remove_and_add }}</option>`;
+            bulkTypeSelectHtml          += `<option value="1">{{ text_add_only }}</option>`;
+            bulkTypeSelectHtml          += `</select>`;            
+            formBulkCopy.innerHTML     += bulkTypeSelectHtml;
+
+            // Attach change handler AFTER the select exists in DOM
+            const attributeSelect = document.getElementById('bulk_copy_attribute');
+            if (attributeSelect) {
+                attributeSelect.addEventListener('change', function () {
+                    updateNewProductsList();
+                });
+            }            
+
+            // Enable submit button when all products are processed
+            if (bulkCopySubmitBtn) {
+                bulkCopySubmitBtn.disabled = false;
+                bulkCopySubmitBtn.classList.remove('disabled');
+            }
+        });
+
+
+
+        document.getElementById('bulk_copy_btn').addEventListener('click', function (event) {
+            event.preventDefault(); // Prevent default form submission
+
+            const formBulkCopy = document.getElementById('bulk_copy_product');
+            if (!formBulkCopy) {
+                console.error('Form with id "bulk_copy_product" not found.');
+                return;
+            }
+
+            const bulkCopyBtn = document.getElementById('bulk_copy_btn');
+            const bulkCopyErrorEl = document.getElementById('bulkCopyError');
+            const bulkCopyModalSuccessEl = document.getElementById('bulkCopyModalSuccess');
+
+            // Disable submit button while request is in progress
+            bulkCopyBtn.disabled = true;
+            bulkCopyBtn.classList.add('disabled');
+
+            // Hide previous errors
+            if (bulkCopyErrorEl) {
+                bulkCopyErrorEl.style.display = 'none';
+                bulkCopyErrorEl.innerHTML = '';
+            }
+
+            // Basic validation: check that attribute is selected
+            const attributeSelect = formBulkCopy.querySelector('select[name="bulk_copy_attribute"]');
+            if (!attributeSelect || !attributeSelect.value) {
+                if (bulkCopyErrorEl) {
+                    bulkCopyErrorEl.innerHTML = '{{ text_no_attributes_selected }}';
+                    bulkCopyErrorEl.style.display = 'block';
+                }
+                bulkCopyBtn.disabled = false;
+                bulkCopyBtn.classList.remove('disabled');
+                return;
+            }
+
+            // Basic validation: at least one product_id[]
+            const productIdInputs = formBulkCopy.querySelectorAll('input[name="product_id[]"]');
+            if (!productIdInputs.length) {
+                if (bulkCopyErrorEl) {
+                    bulkCopyErrorEl.innerHTML = '{{ text_no_products }}';
+                    bulkCopyErrorEl.style.display = 'block';
+                }
+                bulkCopyBtn.disabled = false;
+                bulkCopyBtn.classList.remove('disabled');
+                return;
+            }
+
+            // Basic validation: at least one attribute value is selected globally
+            const anyAttributeChecked = formBulkCopy.querySelector('.attribute_values:checked');
+            if (!anyAttributeChecked) {
+                if (bulkCopyErrorEl) {
+                    bulkCopyErrorEl.innerHTML = '{{ text_no_values_selected }}';
+                    bulkCopyErrorEl.style.display = 'block';
+                }
+                bulkCopyBtn.disabled = false;
+                bulkCopyBtn.classList.remove('disabled');
+                return;
+            }
+
+            // Build FormData from the whole form:
+            // It will include:
+            // - bulk_copy_attribute
+            // - product_id[]
+            // - product_attribute_values[ID][]
+            // - products_status
+            // - products_title
+            // - bulk_add_type
+            const formData = new FormData(formBulkCopy);
+
+            fetch('index.php?route=catalog/bulk_copy/bulkCopyProduct&user_token={{ user_token }}', {
+                method: 'POST',
+                body: formData
+            })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('Error:', data.error || data);
+
+                        if (bulkCopyErrorEl) {
+                            bulkCopyErrorEl.innerHTML = data.error;
+                            bulkCopyErrorEl.style.display = 'block';
+                        }
+
+                        setTimeout(() => {
+                            if (bulkCopyErrorEl) {
+                                bulkCopyErrorEl.style.display = 'none';
+                                bulkCopyErrorEl.innerHTML = '';
+                            }
+                            bulkCopyBtn.disabled = false;
+                            bulkCopyBtn.classList.remove('disabled');
+                        }, 2500);
+
+                        return;
+                    }
+
+                    if (data.success) {
+                        $('#bulkCopyModal').modal('hide');
+
+                        if (bulkCopyModalSuccessEl) {
+                            const bodyEl = bulkCopyModalSuccessEl.querySelector('.modal-body');
+                            if (bodyEl) {
+                                bodyEl.innerHTML = `<h3 class="text-success m-0">${data.success}</h3>`;
+                            }
+                        }
+
+                        $('#bulkCopyModalSuccess').modal('show');
+
+                        setTimeout(() => {
+                            $('#bulkCopyModalSuccess').modal('hide');
+                            // Reload the page to reflect new products
+                            location.reload();
+                        }, 2000);
+                    }
+                })
+                .catch(err => {
+                    console.error('Fetch error:', err);
+
+                    if (bulkCopyErrorEl) {
+                        bulkCopyErrorEl.innerHTML = '{{ error_fetching_data }}';
+                        bulkCopyErrorEl.style.display = 'block';
+                    }
+
+                    setTimeout(() => {
+                        if (bulkCopyErrorEl) {
+                            bulkCopyErrorEl.style.display = 'none';
+                            bulkCopyErrorEl.innerHTML = '';
+                        }
+                        bulkCopyBtn.disabled = false;
+                        bulkCopyBtn.classList.remove('disabled');
+                    }, 2500);
+                });
+
+            return false;
+        });
+
+    });
+
+    function updateNewProductsList() {
+        const attributeSelect = document.getElementById('bulk_copy_attribute');
+        const attributeId = attributeSelect ? attributeSelect.value : '';
+        if (!attributeSelect) {
+            console.error('Attribute select element not found.');
+            return;
+        }
+        const attributeName = attributeSelect.options[attributeSelect.selectedIndex].text;
+        const newProductsList = document.getElementById('newProductsList');
+        if (!newProductsList) {
+            console.error('Element with id "newProductsList" not found.');
+            return;
+        }
+        let selectedProducts = Array.from(
+            newProductsList.getElementsByClassName('bulk-copy-product-item')
+        ).map(item => item.dataset.product_id);
+
+         // Validate selected products
+        if (!selectedProducts.length) {
+            console.error('No selected products found.');
+            return;
+        }
+        const productIds = selectedProducts;
+
+        // Get submit button and global container for attribute values
+        const bulkCopyBtn = document.getElementById('bulk_copy_btn');
+
+        // Disable submit button while loading attribute values
+        if (bulkCopyBtn) {
+            bulkCopyBtn.disabled = true;
+            bulkCopyBtn.classList.add('disabled');
+        }
+
+        // If no attribute selected, show message and re-enable button
+        if (!attributeId) {
+            newProductsList.innerHTML = '<p class="text-danger">{{ text_no_attributes_selected }}</p>';
+            if (bulkCopyBtn) {
+                bulkCopyBtn.disabled = false;
+                bulkCopyBtn.classList.remove('disabled');
+            }
+            return;
+        }
+
+        // Fetch attribute values for the selected attribute
+        fetch('index.php?route=catalog/bulk_copy/getAttributeValues&user_token={{ user_token }}&attribute_id=' + attributeId)
+            .then(response => response.json())
+            .then(data => {
+                // Handle error from backend
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    newProductsList.innerHTML = '<p class="text-danger">' + data.error + '</p>';
+                    return;
+                }
+
+                // If there are attribute values, build the list
+                if (!data.attribute_values || data.attribute_values.length === 0) {
+                    newProductsList.innerHTML = '<p class="text-muted">{{ text_no_values }}</p>';
+                    return;
+                }
+
+                // List of attribute values with checkboxes for each selected product
+                selectedProducts.forEach(productId => {
+                    const productContainer = document.getElementById('bulk_copy_product_item_' + productId);
+                    if (!productContainer) {
+                        return;
+                    }
+
+                    const productName = productContainer.querySelector('.product-title') ? productContainer.querySelector('.product-title').textContent : '';
+
+                    let listHtml = `<p class="text-description small">{{ text_new_products }}</p>`;
+
+                    // Select / deselect all checkbox
+                    listHtml += `<div class="checkbox-item my-2"><input type="checkbox" id="select_all_attribute_values_${productId}" class="checkbox-input" name="select_all_attribute_values_${productId}" value="1" checked /><label for="select_all_attribute_values_${productId}" class="checkbox-label text-description">{{ text_select_all_values }}</label></div>`;
+                    listHtml += '<div class="list-unstyled list-rounded">';
+                    data.attribute_values.forEach(value => {
+                        listHtml += `<div class="checkbox-item"><input type="checkbox" id="attribute_value_${value.value_id}_product_${productId}" class="checkbox-input attribute_values" name="product_attribute_values[${productId}][]" value="${value.value_id}" checked /><label for="attribute_value_${value.value_id}_product_${productId}" class="checkbox-label">${productName}, ${value.name}</label></div>`;
+                    });
+                    listHtml += '</div>';
+
+                    // Insert the list into the product container
+                    const valuesContainerId = 'product-new-attributes-' + productId;
+                    const valuesContainer = document.getElementById(valuesContainerId);
+                    if (valuesContainer) {
+                        valuesContainer.innerHTML = listHtml;
+                        // Add event listener for select all checkbox
+                        document.getElementById(`select_all_attribute_values_${productId}`).addEventListener('change', function () {
+                            let checkboxes = valuesContainer.querySelectorAll('input[name="product_attribute_values[' + productId + '][]"]');
+                            checkboxes.forEach(checkbox => {
+                                checkbox.checked = this.checked;
+                            });
+                        });
+                    }
+                });
+            })
+            .catch(err => {
+                // Handle network / fetch error
+                console.error('Fetch error (attribute values):', err);
+                newProductsList.innerHTML = '<p class="text-danger">{{ text_error_fetching_values }}</p>';
+            })
+            .finally(() => {
+                // Re-enable submit button after processing
+                if (bulkCopyBtn) {
+                    bulkCopyBtn.disabled = false;
+                    bulkCopyBtn.classList.remove('disabled');
+                }
+            });
+    }
+
+    function fetchAttributes() {
+        // Fetch all available select-type attributes for bulk copy
+        return fetch('index.php?route=catalog/bulk_copy/getAttributes&user_token={{ user_token }}')
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error fetching attributes:', data.error);
+                    throw new Error(data.error);
+                }
+
+                // Return attributes array or empty array
+                return data.attributes || [];
+            })
+            .catch(err => {
+                console.error('Fetch error (attributes):', err);
+                throw err;
+            });
+    }
+
+	function fetchProductInfo(productId) {
+		return fetch('index.php?route=catalog/bulk_copy/getProductInfo&user_token={{ user_token }}&product_id=' + productId)
+			.then(response => response.json())
+			.then(data => {
+				if (data.error) {
+					console.error('Error:', data.error);
+					document.querySelector('#bulkCopyModalError .modal-body .text-danger').textContent = data.error;
+					$('#bulkCopyModalError').modal('show');
+					return null;
+				}
+				return data.product; // Assuming the response contains a 'product' object
+			})
+			.catch(err => {
+				console.error('Fetch error:', err);
+				document.querySelector('#bulkCopyModalError .modal-body .text-danger').textContent = '{{ text_error_fetching_info }}';
+				$('#bulkCopyModalError').modal('show');
+				return null;
+			});
+	}
+</script>
+<!-- End of Modal -->
